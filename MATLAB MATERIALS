@@ -1,0 +1,47 @@
+% MATLAB 程式: 計算輸出功率、工作溫度與光強度的關係
+
+% 清除工作區和命令視窗，確保不受舊變數影響
+clc; clear; close all;
+
+% 定義材料的屬性 (假設值)
+absorption_coefficient = 0.8; % 材料的吸收係數，範圍在 0 到 1 之間，表示材料吸收光能的比例
+thermal_conductivity = 0.5; % 材料的熱導率 (W/mK)，表示材料傳熱的能力
+emissivity = 0.85; % 材料的發射率，範圍 0 到 1，表示材料輻射能量的效率
+ambient_temperature = 300; % 環境溫度 (K)，假設環境為 300K (約 27°C)
+boltzmann_constant = 5.670374419e-8; % 斯特藍-玻爾茲曼常數 (W/m^2K^4)，用於輻射計算
+
+% 定義光源參數
+source_power = 1000; % 光源輸出功率 (W)，表示光源的總能量輸出
+beam_diameter = 0.1; % 光束直徑 (m)，假設光束為 0.1 米直徑
+beam_area = pi * (beam_diameter / 2)^2; % 計算光束的截面積 (m^2)，使用圓面積公式 pi*r^2
+
+% 計算光強度範圍 (W/m^2)
+intensity_range = linspace(source_power / beam_area, source_power * 10 / beam_area, 100); % 設定光強度範圍，從最小值到最大值，共取 100 個點
+
+% 計算材料的吸收功率
+absorbed_power = absorption_coefficient * intensity_range; % 吸收功率 (W/m^2)，等於入射光強度乘以吸收係數
+
+% 計算材料的平衡溫度 (考慮輻射熱損失)
+temperature = ((absorbed_power ./ (emissivity * boltzmann_constant)) + ambient_temperature^4).^(1/4); % 根據斯特藍-玻爾茲曼定律計算平衡溫度
+
+% 計算輸出功率 (假設輸出功率等於吸收功率)
+output_power = absorbed_power; % 輸出功率 (W/m^2)，在此假設材料沒有額外的熱損失
+
+% 繪製結果
+figure; % 建立新圖形窗口
+subplot(2,1,1); % 建立第一個子圖 (輸出功率 vs 光強度)
+plot(intensity_range, output_power, 'r', 'LineWidth', 2); % 繪製輸出功率曲線，紅色線條，線寬 2
+xlabel('光強度 (W/m^2)'); % 設置 x 軸標籤
+ylabel('輸出功率 (W/m^2)'); % 設置 y 軸標籤
+title('輸出功率與光強度的關係'); % 設置圖表標題
+grid on; % 開啟網格線，方便觀察數據變化
+
+subplot(2,1,2); % 建立第二個子圖 (溫度 vs 光強度)
+plot(intensity_range, temperature, 'b', 'LineWidth', 2); % 繪製溫度變化曲線，藍色線條，線寬 2
+xlabel('光強度 (W/m^2)'); % 設置 x 軸標籤
+ylabel('溫度 (K)'); % 設置 y 軸標籤
+title('工作溫度與光強度的關係'); % 設置圖表標題
+grid on; % 開啟網格線
+
+% 顯示計算結束訊息，確保用戶知道計算已完成
+disp('計算完成，已繪製結果圖');
