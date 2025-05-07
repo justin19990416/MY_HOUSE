@@ -1,0 +1,60 @@
+% 清除工作區與視窗
+clc; clear; close all;
+
+% 材料與環境參數
+absorption_coefficient = 0.8;            % 吸收係數 (1/m)
+thermal_conductivity = 0.5;              % 熱導率 (W/mK)
+emissivity = 0.85;                       % 發射率 (0~1)
+ambient_temperature = 300;              % 環境溫度 (K)
+boltzmann_constant = 5.670374419e-8;    % 斯特藍-玻爾茲曼常數
+
+% 入射條件與幾何參數
+wavelength = 550e-9;                    % 波長 (550nm)
+thickness = 1e-4;                       % 材料厚度 (100 μm)
+incident_angle_deg = 45;               % 入射角度 (度)
+incident_angle_rad = deg2rad(incident_angle_deg); % 轉弧度
+effective_thickness = thickness / cos(incident_angle_rad); % 有效厚度
+
+% 光源參數
+source_power = 1e10;                   % 總功率 (W)
+beam_diameter = 0.1;                   % 光束直徑 (m)
+beam_area = pi * (beam_diameter / 2)^2;% 光束面積 (m^2)
+
+% 光強度範圍
+intensity_range = linspace(source_power / beam_area, source_power * 10 / beam_area, 100);
+
+% 吸收與溫度計算
+absorption_factor = 1 - exp(-absorption_coefficient * effective_thickness); % 吸收因子
+absorbed_power = intensity_range * absorption_factor;                        % 吸收功率
+temperature = ((absorbed_power ./ (emissivity * boltzmann_constant)) + ambient_temperature^4).^(1/4); % 平衡溫度
+output_power = absorbed_power;                                              % 假設無損耗，輸出=吸收
+
+% 找出最大值以設定 Y 軸範圍
+max_output = max(output_power);
+max_temp = max(temperature);
+
+% 繪圖
+figure('Units','normalized','Position',[0.2 0.2 0.6 0.8]); % 放大圖形視窗
+
+% --- 圖1：輸出功率 ---
+subplot(2,1,1);
+plot(intensity_range, output_power, 'r-', 'LineWidth', 2); % 紅線
+ylabel('輸出功率 (W/m^2)', 'FontSize', 12);
+title('輸出功率與光強度的關係', 'FontSize', 14);
+xticks([]); % 不顯示 x 軸刻度文字（留給下方圖）
+ylim([0 max_output * 1.1]); % 放大輸出功率 Y 軸範圍
+grid on;
+set(gca, 'FontSize', 12, 'LineWidth', 1.2);
+
+% --- 圖2：平衡溫度 ---
+subplot(2,1,2);
+plot(intensity_range, temperature, 'b-', 'LineWidth', 2); % 藍線
+xlabel('光強度  (W/m^2)', 'FontSize', 12);
+ylabel('溫度 (K)', 'FontSize', 12);
+title('工作溫度與光強度的關係', 'FontSize', 14);
+ylim([min(temperature) * 0.95, max_temp * 1.05]); % 放大溫度範圍
+grid on;
+set(gca, 'FontSize', 12, 'LineWidth', 1.2);
+
+% 顯示完成訊息
+disp('圖形繪製完成（修正藍線顯示）');
