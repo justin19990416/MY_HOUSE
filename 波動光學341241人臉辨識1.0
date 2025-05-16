@@ -1,0 +1,99 @@
+# 匯入必要的函式庫
+import cv2                             # OpenCV，用於影像處理
+import numpy as np                    # NumPy，用於數學與矩陣運算
+import matplotlib.pyplot as plt       # Matplotlib，用於圖像顯示
+from matplotlib.font_manager import FontProperties  # 匯入字型支援繁體中文
+
+# 設定中文字型（以 Windows 為例，使用微軟正黑體）
+font = FontProperties(fname="C:/Windows/Fonts/msjh.ttc", size=14)
+
+# 讀取圖像檔案（請替換為實際圖片路徑）
+image_path = "test1.jpg"  # ← 替換為正確的圖片路徑
+original_image = cv2.imread(image_path)  # 讀取圖像檔案
+
+# 檢查是否成功載入圖像
+if original_image is None:
+    print("❌ 圖片讀取失敗，請確認檔案路徑是否正確")
+else:
+    # 將彩色圖像轉換為灰階（便於傅立葉轉換與干涉模擬）
+    gray_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
+
+    # ===== 模擬干涉條紋（加入週期正弦波） =====
+    rows, cols = gray_image.shape                     # 取得圖像大小
+    x = np.linspace(0, 2 * np.pi * 10, cols)          # 建立10個波週期的橫向座標
+    interference_pattern = (127.5 * (1 + np.sin(x))).astype(np.uint8)  # 將正弦波轉為灰階值
+    interference_image = np.tile(interference_pattern, (rows, 1))      # 重複排成整張圖
+    interfered_image = cv2.addWeighted(gray_image, 0.7, interference_image, 0.3, 0)  # 混合干涉效果
+
+    # ===== 模擬繞射模糊（高斯模糊處理） =====
+    blurred_image = cv2.GaussianBlur(gray_image, (11, 11), 5)  # 應用高斯模糊，模擬繞射現象
+
+    # ===== 計算傅立葉頻譜（空間頻率特性分析） =====
+    def compute_spectrum(image):
+        f = np.fft.fft2(image)                  # 執行2D傅立葉轉換
+        fshift = np.fft.fftshift(f)             # 將低頻中心化
+        magnitude_spectrum = 20 * np.log(np.abs(fshift) + 1)  # 取對數縮放後的頻譜圖
+        return magnitude_spectrum               # 回傳頻譜圖結果
+
+    # 計算三張圖的頻譜圖
+    spectrum_original = compute_spectrum(gray_image)         # 原始圖像頻譜
+    spectrum_interfered = compute_spectrum(interfered_image) # 干涉圖頻譜
+    spectrum_blurred = compute_spectrum(blurred_image)       # 模糊圖頻譜
+
+    # ===== 準備顯示所有圖像與頻譜 =====
+    plt.figure(figsize=(18, 10))  # 設定整體圖像的寬高比例
+
+    # 每張子圖的標題與說明內容
+    descriptions = [
+        "彩色原圖：攝影取得的原始彩色圖像，用於參考。",
+        "灰階影像：去除色彩資訊，僅保留亮度，用於頻譜分析。",
+        "干涉模擬：加入週期性波形，模擬相干光干涉條紋。",
+        "繞射模擬：使用高斯模糊模擬光學繞射造成的模糊。",
+        "頻譜（原始）：原圖的頻譜，反映圖像的空間頻率結構。",
+        "頻譜（干涉）：干涉圖像的頻譜，顯示規律條紋頻率特徵。",
+        "頻譜（模糊）：模糊圖像的頻譜，高頻資訊被抑制。",
+    ]
+
+    # 對應的影像資料（與說明文字對應）
+    images = [
+        cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB),  # 將 BGR 轉 RGB 顯示彩圖
+        gray_image,                                       # 灰階圖
+        interfered_image,                                 # 干涉圖
+        blurred_image,                                    # 模糊圖
+        spectrum_original,                                # 原始頻譜
+        spectrum_interfered,                              # 干涉頻譜
+        spectrum_blurred                                  # 模糊頻譜
+    ]
+
+    # 對應 colormap 設定
+    cmaps = ['none', 'gray', 'gray', 'gray', 'gray', 'gray', 'gray']
+
+    # 繪製圖像與說明
+    for i in range(7):
+        ax = plt.subplot(2, 4, i + 1)  # 建立 2 行 4 欄 的子圖格局
+        
+        # 顯示圖像（根據是否為灰階圖決定 colormap）
+        if cmaps[i] == 'gray':
+            ax.imshow(images[i], cmap='gray')
+        else:
+            ax.imshow(images[i])
+        
+        # 設定標題（放在圖像上方）
+        ax.set_title(descriptions[i].split('：')[0], fontproperties=font, fontsize=14)
+        
+        # 關閉座標軸顯示
+        ax.axis('off')
+        
+        # 顯示每張圖的說明（改為貼近圖像下緣）
+        ax.annotate(
+            descriptions[i].split('：')[1],       # 說明內文
+            xy=(0.5, -0.05),                      # 向上貼近圖像底部（距離變小）
+            xycoords='axes fraction',            # 使用子圖的相對座標
+            ha='center',                         # 水平置中對齊
+            fontsize=10,
+            fontproperties=font
+        )
+
+    # 自動調整整體排版（避免重疊）
+    plt.tight_layout()
+    plt.show()  # 顯示所有圖像結果
